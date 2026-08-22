@@ -2001,7 +2001,7 @@ function selSiNo(valorActivo,onCambio,etq){
 /* ---------- 3. Almacenamiento en Listas de SharePoint (vía Graph API) ---------- */
 const SITE_HOST = "idealcontrol365.sharepoint.com";
 const SITE_PATH = "/sites/Integraciones";
-const APP_VERSION = 'v8-listas';
+const APP_VERSION = 'v9-lectura-paralela';
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 let siteId = null;
@@ -2181,7 +2181,9 @@ let ultimoErrorStore = '';
 
 const store = {
   async get(k){
-    return enCola(async ()=>{
+    // Las lecturas NO pasan por la cola: pueden ocurrir en paralelo sin riesgo
+    // de conflicto, y así la carga inicial no se hace en serie.
+    return (async ()=>{
       try{
         if(k === K_PERS){
           return (await listarItems('Acred_Personal')).map(i=>MAPEOS.personal.aObjeto(i.f));
@@ -2223,7 +2225,7 @@ const store = {
         ultimoErrorStore = e.message || String(e);
         return null;
       }
-    });
+    })();
   },
 
   async set(k, v){
