@@ -2001,7 +2001,7 @@ function selSiNo(valorActivo,onCambio,etq){
 /* ---------- 3. Almacenamiento en Listas de SharePoint (vía Graph API) ---------- */
 const SITE_HOST = "idealcontrol365.sharepoint.com";
 const SITE_PATH = "/sites/Integraciones";
-const APP_VERSION = 'v9-lectura-paralela';
+const APP_VERSION = 'v10-entornos';
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 let siteId = null;
@@ -2086,34 +2086,39 @@ async function borrarItem(nombre, spId){
   if(!r.ok && r.status !== 404) throw new Error('HTTP '+r.status+': '+await graphErrorDetail(r));
 }
 
+/* ---- Entorno de datos: cambia SOLO esta línea para apuntar a listas de prueba ---- */
+const ENTORNO = 'produccion'; // 'produccion' | 'prueba'
+const SUFIJO_LISTAS = ENTORNO === 'prueba' ? '_TEST' : '';
+function L(nombreLista){ return nombreLista + SUFIJO_LISTAS; }
+
 /* ---- Mapeos entre los objetos de la app y los campos de cada lista ---- */
 const bool = v => v===true || v==='true' || v===1;
 
 const MAPEOS = {
   personal: {
-    lista:'Acred_Personal',
+    lista: L('Acred_Personal'),
     aFields: o => ({ Title:o.nombre||'', refId:o.id||'', nombre:o.nombre||'', cargo:o.cargo||'', unidad:o.unidad||'', activo: !!o.activo }),
     aObjeto: f => ({ id:f.refId||'', nombre:f.nombre||'', cargo:f.cargo||'', unidad:f.unidad||'', activo: bool(f.activo) })
   },
   mandantes: {
-    lista:'Acred_Mandantes',
+    lista: L('Acred_Mandantes'),
     aFields: o => ({ Title:o.nombre||'', refId:o.id||'', nombre:o.nombre||'', activo: !!o.activo,
                      metodo:o.metodo||'', plataforma:o.plataforma||'', plataformaUrl:o.plataformaUrl||'', procedimiento:o.procedimiento||'' }),
     aObjeto: f => ({ id:f.refId||'', nombre:f.nombre||'', activo: bool(f.activo),
                      metodo:f.metodo||'', plataforma:f.plataforma||'', plataformaUrl:f.plataformaUrl||'', procedimiento:f.procedimiento||'' })
   },
   contactos: {
-    lista:'Acred_Contactos',
+    lista: L('Acred_Contactos'),
     aFields: o => ({ Title:o.nombre||'', refId:o.id||'', mandanteId:o.mandanteId||'', nombre:o.nombre||'', cargo:o.cargo||'', correo:o.correo||'', telefono:o.telefono||'' }),
     aObjeto: f => ({ id:f.refId||'', mandanteId:f.mandanteId||'', nombre:f.nombre||'', cargo:f.cargo||'', correo:f.correo||'', telefono:f.telefono||'' })
   },
   emplazamientos: {
-    lista:'Acred_Emplazamientos',
+    lista: L('Acred_Emplazamientos'),
     aFields: o => ({ Title:o.nombre||'', refId:o.id||'', mandanteId:o.mandanteId||'', nombre:o.nombre||'', tipo:o.tipo||'', activo: !!o.activo }),
     aObjeto: f => ({ id:f.refId||'', mandanteId:f.mandanteId||'', nombre:f.nombre||'', tipo:f.tipo||'', activo: bool(f.activo) })
   },
   acreditaciones: {
-    lista:'Acred_Acreditaciones',
+    lista: L('Acred_Acreditaciones'),
     aFields: o => ({ Title:o.id||'', refId:o.id||'', personaId:o.personaId||'', clienteId:o.clienteId||'',
                      emplazamientoId:o.emplazamientoId||'', emplazamiento:o.emplazamiento||'',
                      estado:o.estado||'', vencimiento:o.vencimiento||null, obs:o.obs||'' }),
@@ -2155,17 +2160,17 @@ async function sincronizar(mapeo, arr){
 
 /* ---- Config clave/valor ---- */
 async function configGet(clave){
-  const items = await listarItems('Acred_Config');
+  const items = await listarItems(L('Acred_Config'));
   const it = items.find(x=>x.f.clave===clave);
   if(!it) return null;
   try{ return JSON.parse(it.f.valor); }catch(e){ return it.f.valor; }
 }
 async function configSet(clave, valor){
-  const items = await listarItems('Acred_Config');
+  const items = await listarItems(L('Acred_Config'));
   const it = items.find(x=>x.f.clave===clave);
   const payload = { Title:clave, clave:clave, valor: JSON.stringify(valor) };
-  if(it) await actualizarItem('Acred_Config', it.spId, payload);
-  else await crearItem('Acred_Config', payload);
+  if(it) await actualizarItem(L('Acred_Config'), it.spId, payload);
+  else await crearItem(L('Acred_Config'), payload);
 }
 
 /* ---- Cola: una operación a la vez dentro de esta pestaña ---- */
@@ -2186,17 +2191,17 @@ const store = {
     return (async ()=>{
       try{
         if(k === K_PERS){
-          return (await listarItems('Acred_Personal')).map(i=>MAPEOS.personal.aObjeto(i.f));
+          return (await listarItems(L('Acred_Personal'))).map(i=>MAPEOS.personal.aObjeto(i.f));
         }
         if(k === K_ACR){
-          return (await listarItems('Acred_Acreditaciones')).map(i=>MAPEOS.acreditaciones.aObjeto(i.f));
+          return (await listarItems(L('Acred_Acreditaciones'))).map(i=>MAPEOS.acreditaciones.aObjeto(i.f));
         }
         if(k === K_TIPOS){
-          const t = (await listarItems('Acred_Tipos')).map(i=>i.f.tipo).filter(Boolean);
+          const t = (await listarItems(L('Acred_Tipos'))).map(i=>i.f.tipo).filter(Boolean);
           return t.length ? t : null;
         }
         if(k === K_LOG){
-          return (await listarItems('Acred_Bitacora')).map(i=>({
+          return (await listarItems(L('Acred_Bitacora'))).map(i=>({
             ts:i.f.ts||'', u:i.f.usuarioId||'', acc:i.f.accion||'',
             det:i.f.detalle||'', ant:i.f.valorAnterior||'', nue:i.f.valorNuevo||''
           })).sort((a,b)=> (a.ts<b.ts?1:-1));
@@ -2204,9 +2209,9 @@ const store = {
         if(k === K_CLI){
           // Reconstruye los mandantes con sus contactos y emplazamientos anidados
           const [ms, cs, es] = await Promise.all([
-            listarItems('Acred_Mandantes'),
-            listarItems('Acred_Contactos'),
-            listarItems('Acred_Emplazamientos')
+            listarItems(L('Acred_Mandantes')),
+            listarItems(L('Acred_Contactos')),
+            listarItems(L('Acred_Emplazamientos'))
           ]);
           const mandantes = ms.map(i=>MAPEOS.mandantes.aObjeto(i.f));
           const contactos = cs.map(i=>MAPEOS.contactos.aObjeto(i.f));
@@ -2236,23 +2241,23 @@ const store = {
           if(k === K_PERS){ await sincronizar(MAPEOS.personal, v); return true; }
           if(k === K_ACR){  await sincronizar(MAPEOS.acreditaciones, v); return true; }
           if(k === K_TIPOS){
-            const actuales = await listarItems('Acred_Tipos');
+            const actuales = await listarItems(L('Acred_Tipos'));
             const nuevos = (v||[]).filter(Boolean);
             for(const t of nuevos){
-              if(!actuales.some(a=>a.f.tipo===t)) await crearItem('Acred_Tipos', { Title:t, tipo:t });
+              if(!actuales.some(a=>a.f.tipo===t)) await crearItem(L('Acred_Tipos'), { Title:t, tipo:t });
             }
             for(const a of actuales){
-              if(a.f.tipo && !nuevos.includes(a.f.tipo)) await borrarItem('Acred_Tipos', a.spId);
+              if(a.f.tipo && !nuevos.includes(a.f.tipo)) await borrarItem(L('Acred_Tipos'), a.spId);
             }
             return true;
           }
           if(k === K_LOG){
             // La bitácora solo crece: se agregan las entradas nuevas
-            const actuales = await listarItems('Acred_Bitacora');
+            const actuales = await listarItems(L('Acred_Bitacora'));
             const yaHay = new Set(actuales.map(i=>(i.f.ts||'')+'|'+(i.f.detalle||'')));
             const pendientes = (v||[]).filter(r=> !yaHay.has((r.ts||'')+'|'+(r.det||'')) );
             for(const r of pendientes.slice(0, 50)){
-              await crearItem('Acred_Bitacora', {
+              await crearItem(L('Acred_Bitacora'), {
                 Title: r.acc||'registro', ts: r.ts||new Date().toISOString(),
                 usuarioId: r.u||'', accion: r.acc||'', detalle: r.det||'',
                 valorAnterior: r.ant||'', valorNuevo: r.nue||''
