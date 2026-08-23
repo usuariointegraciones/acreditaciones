@@ -33,7 +33,7 @@
 <body>
 
 <h1>Configuración inicial</h1>
-<p class="sub">Crea las listas de SharePoint que necesita la plataforma de acreditaciones. Ejecutar una sola vez.</p>
+<p class="sub" id="subEntorno">Crea las listas de SharePoint que necesita la plataforma de acreditaciones. Ejecutar una sola vez.</p>
 
 <div class="panel">
   <div id="estado" class="status warn">Cargando…</div>
@@ -144,6 +144,21 @@ const TENANT_ID = "7b0a5418-0340-4fc4-941c-4b148bb14d9e";
 const SITE_HOST = "idealcontrol365.sharepoint.com";
 const SITE_PATH = "/sites/Integraciones";
 const SCOPES = ["Sites.Manage.All"];
+// Cambia esto a true para crear las copias de prueba (sufijo _TEST) en vez de las reales
+const CREAR_COMO_PRUEBA = true;
+const SUFIJO = CREAR_COMO_PRUEBA ? '_TEST' : '';
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const p = document.getElementById('subEntorno');
+  if(!p) return;
+  if(CREAR_COMO_PRUEBA){
+    p.innerHTML = '🧪 <strong>MODO PRUEBA</strong> — va a crear copias con sufijo <code>_TEST</code>, separadas de los datos reales.';
+    p.style.color = '#b5650a';
+  }else{
+    p.innerHTML = '⚠️ <strong>MODO PRODUCCIÓN</strong> — va a crear/reparar las listas reales que usa la app.';
+    p.style.color = '#b02020';
+  }
+});
 /* ========================================================= */
 
 /* Definición de las listas: cada columna con su tipo Graph */
@@ -155,14 +170,14 @@ const fechaHora  = ()=>({ dateTime:{ format:'dateTime' } });
 const opciones   = (arr)=>({ choice:{ choices:arr, displayAs:'dropDownMenu' } });
 
 const LISTAS = [
-  { nombre:'Acred_Personal', desc:'Nómina de trabajadores', columnas:[
+  { nombre:'Acred_Personal'+SUFIJO, desc:'Nómina de trabajadores', columnas:[
     { name:'refId',  ...texto(50) },
     { name:'nombre', ...texto(200) },
     { name:'cargo',  ...texto(150) },
     { name:'unidad', ...texto(100) },
     { name:'activo', ...siNo() }
   ]},
-  { nombre:'Acred_Mandantes', desc:'Empresas mandantes', columnas:[
+  { nombre:'Acred_Mandantes'+SUFIJO, desc:'Empresas mandantes', columnas:[
     { name:'refId',         ...texto(50) },
     { name:'nombre',        ...texto(200) },
     { name:'activo',        ...siNo() },
@@ -171,7 +186,7 @@ const LISTAS = [
     { name:'plataformaUrl', ...texto(255) },
     { name:'procedimiento', ...textoLargo() }
   ]},
-  { nombre:'Acred_Contactos', desc:'Contactos por mandante', columnas:[
+  { nombre:'Acred_Contactos'+SUFIJO, desc:'Contactos por mandante', columnas:[
     { name:'refId',      ...texto(50) },
     { name:'mandanteId', ...texto(50) },
     { name:'nombre',     ...texto(200) },
@@ -179,14 +194,14 @@ const LISTAS = [
     { name:'correo',     ...texto(200) },
     { name:'telefono',   ...texto(60) }
   ]},
-  { nombre:'Acred_Emplazamientos', desc:'Emplazamientos por mandante', columnas:[
+  { nombre:'Acred_Emplazamientos'+SUFIJO, desc:'Emplazamientos por mandante', columnas:[
     { name:'refId',      ...texto(50) },
     { name:'mandanteId', ...texto(50) },
     { name:'nombre',     ...texto(200) },
     { name:'tipo',       ...opciones(['Piscicultura','Planta de proceso','Centro de cultivo']) },
     { name:'activo',     ...siNo() }
   ]},
-  { nombre:'Acred_Acreditaciones', desc:'Acreditaciones', columnas:[
+  { nombre:'Acred_Acreditaciones'+SUFIJO, desc:'Acreditaciones', columnas:[
     { name:'refId',           ...texto(50) },
     { name:'personaId',       ...texto(50) },
     { name:'clienteId',       ...texto(50) },
@@ -196,7 +211,7 @@ const LISTAS = [
     { name:'vencimiento',     ...fecha() },
     { name:'obs',             ...textoLargo() }
   ]},
-  { nombre:'Acred_Bitacora', desc:'Bitácora de cambios', columnas:[
+  { nombre:'Acred_Bitacora'+SUFIJO, desc:'Bitácora de cambios', columnas:[
     { name:'ts',            ...fechaHora() },
     { name:'usuarioId',     ...texto(100) },
     { name:'accion',        ...texto(60) },
@@ -204,10 +219,10 @@ const LISTAS = [
     { name:'valorAnterior', ...texto(255) },
     { name:'valorNuevo',    ...texto(255) }
   ]},
-  { nombre:'Acred_Tipos', desc:'Catálogo de tipos de emplazamiento', columnas:[
+  { nombre:'Acred_Tipos'+SUFIJO, desc:'Catálogo de tipos de emplazamiento', columnas:[
     { name:'tipo', ...texto(100) }
   ]},
-  { nombre:'Acred_Config', desc:'Configuración interna de la plataforma', columnas:[
+  { nombre:'Acred_Config'+SUFIJO, desc:'Configuración interna de la plataforma', columnas:[
     { name:'clave', ...texto(100) },
     { name:'valor', ...textoLargo() }
   ]}
